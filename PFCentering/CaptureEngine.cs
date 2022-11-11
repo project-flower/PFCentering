@@ -9,13 +9,20 @@ namespace PFCentering
 {
     internal static class CaptureEngine
     {
+        #region Private Fields
+
+        private static int zOrder = 0;
+
+        #endregion
+
         #region Internal Methods
 
-        internal static (IntPtr, Rectangle)[] CollectWindows(out Bitmap bitmap, out Rectangle totalScreenSize)
+        internal static (IntPtr, Rectangle, int)[] CollectWindows(out Bitmap bitmap, out Rectangle totalScreenSize)
         {
-            var result = new List<(IntPtr, Rectangle)>();
-            var handles = new List<IntPtr>();
-            GCHandle allocated = GCHandle.Alloc(handles);
+            var result = new List<(IntPtr, Rectangle, int)>();
+            var windows = new List<(IntPtr, int)>();
+            GCHandle allocated = GCHandle.Alloc(windows);
+            zOrder = -1;
 
             try
             {
@@ -30,14 +37,16 @@ namespace PFCentering
                 }
             }
 
-            foreach (IntPtr handle in handles)
+            foreach ((IntPtr, int) window in windows)
             {
+                IntPtr handle = window.Item1;
+
                 //if (User32.GetWindowRect(handle, out RECT rect))
                 if (DwmApi.DwmGetWindowAttribute(handle, DWMWINDOWATTRIBUTE.DWMWA_EXTENDED_FRAME_BOUNDS, out RECT rect, Marshal.SizeOf(typeof(RECT))) == 0)
                 {
                     int top = rect.Top;
                     int left = rect.Left;
-                    result.Add((handle, new Rectangle(left, top, Math.Abs(rect.Right - left), Math.Abs(rect.Bottom - top))));
+                    result.Add((handle, new Rectangle(left, top, Math.Abs(rect.Right - left), Math.Abs(rect.Bottom - top)), window.Item2));
                 }
             }
 
@@ -119,12 +128,13 @@ namespace PFCentering
 
         private static bool WndEnumProc(IntPtr hWnd, IntPtr lParam)
         {
+            ++zOrder;
             GCHandle gch = GCHandle.FromIntPtr(lParam);
-            List<IntPtr> handles;
+            List<(IntPtr, int)> windows;
 
             try
             {
-                handles = (List<IntPtr>)gch.Target;
+                windows = (List<(IntPtr, int)>)gch.Target;
             }
             catch
             {
@@ -136,7 +146,7 @@ namespace PFCentering
                 return true;
             }
 
-            handles.Add(hWnd);
+            windows.Add((hWnd, zOrder));
             return true;
         }
 

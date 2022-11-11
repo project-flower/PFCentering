@@ -14,7 +14,7 @@ namespace PFCentering
         private int prevX = int.MinValue;
         private int prevY = int.MinValue;
         private int windowIndex = -1;
-        private (IntPtr, Rectangle)[] windows = new (IntPtr, Rectangle)[0];
+        private (IntPtr, Rectangle, int)[] windows = new (IntPtr, Rectangle, int)[0];
 
         #endregion
 
@@ -101,11 +101,6 @@ namespace PFCentering
             MessageBox.Show(this, message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
 
-        private bool SmallerThan(Rectangle rectangle1, Rectangle rectangle2)
-        {
-            return (rectangle1.Width * rectangle1.Height) < (rectangle2.Width * rectangle2.Height);
-        }
-
         #endregion
 
         // Designer's Methods
@@ -155,17 +150,18 @@ namespace PFCentering
 
             for (int i = 0; i < windows.Length; ++i)
             {
-                Rectangle window = windows[i].Item2;
+                (IntPtr, Rectangle, int) window = windows[i];
+                Rectangle bounds = window.Item2;
                 Point point = pictureBox.PointToScreen(e.Location);
                 int x = point.X;
                 int y = point.Y;
 
-                if ((x < window.Left)
-                    || (y < window.Top)
-                    || (x > window.Right)
-                    || (y > window.Bottom)) continue;
+                if ((x < bounds.Left)
+                    || (y < bounds.Top)
+                    || (x > bounds.Right)
+                    || (y > bounds.Bottom)) continue;
 
-                if (candidate >= 0 && !SmallerThan(window, windows[candidate].Item2))
+                if (candidate >= 0 && (window.Item3 > windows[candidate].Item3))
                 {
                     continue;
                 }
